@@ -1,0 +1,99 @@
+﻿@page "/post/{PostId}"
+@inject NavigationManager navigationManager
+@inject HttpClient httpClient
+@using Microsoft.AspNetCore.SignalR.Client
+
+<h3>PostDetail</h3>
+
+<div class="row">
+    @if (Post != null)
+    {
+        <div class="col-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2>@Post.Author.Name</h2>
+                    @*<img src="@item.Author.Avatar" height="30" class="card-img"/>*@
+                </div>
+                <div class="card-body">
+                    <h2>@Post.Content</h2>
+                    @if (Post.Poster != null)
+                    {
+                        <img src="@Post.Poster" class="card-img" />
+                    }
+                </div>
+                <div class="card-footer">
+                    <p>Likes: @Post.LikesCounter Comments: @Post.СommentsCounter</p>
+                    <p class="text-muted"><small>@Post.CreatedAt</small></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <CascadingAuthenticationState>
+                <AuthorizeView>
+                    <Authorized Context="Auth">
+                        <EditForm OnValidSubmit="() => OnSubmit(Auth.User.Identity.Name)" Model="NewComment">
+                            <InputText @bind-Value="NewComment.Message" id="message" type="text" placeholder="Message" class="form-control"></InputText>
+                            <button type="submit">Send comment</button>
+                        </EditForm>
+                    </Authorized>
+                </AuthorizeView>
+            </CascadingAuthenticationState>
+            @if (Comments != null)
+            {
+                @foreach (var comment in Comments)
+                {
+                    <div class="card mt-2">
+                        <div class="card-header">
+                            <p>@comment.Author.Name</p>
+                        </div>
+                        <div class="card-body">
+                            <p>@comment.Message</p>
+                        </div>
+                        <div class="card-footer">
+                            <p class="text-muted">@comment.CreatedAt</p>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string PostId { get; set; }
+    public PostDto Post { get; set; } = null;
+    public List<CommentDto> Comments { get; set; } = null;
+    public CommentRequest NewComment { get; set; } = new CommentRequest();
+    public HubConnection HubConnection { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Post = await httpClient.GetFromJsonAsync<PostDto>($"/api/Post/{PostId}");
+        Comments = await httpClient.GetFromJsonAsync<List<CommentDto>>($"/api/Comment/{PostId}");
+        HubConnection = new HubConnectionBuilder().WithUrl("http://localhost:5793/commentsHub").Build();
+
+        HubConnection.On<string, string, string>("NewCommentAdded", async (postId, profileId, message) =>
+        {
+            Console.WriteLine($"{postId}, {profileId}, {message}");
+            Comments = await httpClient.GetFromJsonAsync<List<CommentDto>>($"/api/Comment/{PostId}");
+        });
+
+        await HubConnection.StartAsync();
+        await HubConnection.SendAsync("JoinGroup", PostId);
+        navigationManager.LocationChanged += LocationChanged;
+    }
+
+    public async void LocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        await HubConnection.SendAsync("LeaveGroup", PostId);
+    }
+
+    public async void OnSubmit(string profileEmail)
+    {
+        NewComment.PostId = PostId;
+        NewComment.ProfileEmail = profileEmail;
+        await httpClient.PostAsJsonAsync("/api/Comment", NewComment);
+        await HubConnection.SendAsync("NewComment", PostId, profileEmail, NewComment.Message);
+    }
+}

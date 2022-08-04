@@ -1,0 +1,37 @@
+﻿@page "/users"
+
+@inject AccountService AccountService
+
+<h3>Users</h3>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Email</th>
+            <th scope="col">Photo</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in listUsers)
+        {
+            if (user != null && user.Name != null)
+            {
+                <tr>
+                    <td>@user.Name</td>
+                    <td>@user.Email</td>
+                    <td><img height="50" src="@user.Avatar"/></td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public List<ProfileDto> listUsers { get; set; } = new List<ProfileDto>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        listUsers = await AccountService.GetAllUsers();
+    }
+}

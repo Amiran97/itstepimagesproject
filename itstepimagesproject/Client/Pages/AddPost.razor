@@ -1,0 +1,44 @@
+﻿@page "/addpost/{UserName}"
+@inject AccountService AccountService
+@inject HttpClient HttpClient
+
+<h3>Add new post</h3>
+<div class="row">
+    <div class="form-group col-6">
+        <input @bind="@Content" @oninput="@((e) => { Content=(string)e.Value;})" name="content" type="text" id="content" placeholder="Content" class="form-control mt-2" />
+        <img height="150" src="@UploadedBase64Image" alt="Red dot" class="mt-2" />
+        <InputFile OnChange="HandleFileSelected" class="form-control mt-2" />
+        <button @onclick="onFormSubmit" class="btn btn-primary mt-2">Add post</button>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string UserName { get; set; }
+    public string Content { get; set; } = "";
+    public IFileListEntry File { get; set; }
+    public string UploadedBase64Image { get; set; } = "data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
+    public System.IO.MemoryStream MemoryStream { get; set; }
+
+    async Task HandleFileSelected(IFileListEntry[] files)
+    {
+        File = files.FirstOrDefault();
+        MemoryStream = await File.ReadAllAsync();
+        var base64 = Convert.ToBase64String(MemoryStream.ToArray());
+        UploadedBase64Image = $"data:{File.Type};base64, {base64}";
+    }
+
+    async Task onFormSubmit()
+    {
+        if (File != null)
+        {
+            var content = new MultipartFormDataContent();
+            var byteArray = new ByteArrayContent(MemoryStream.ToArray());
+            content.Add(byteArray, "\"files\"", File.Name);
+            content.Add(new StringContent(UserName), "emailProfile");
+            content.Add(new StringContent(Content), "content");
+
+            await HttpClient.PostAsync("/api/Post", content);
+        }
+    }
+}

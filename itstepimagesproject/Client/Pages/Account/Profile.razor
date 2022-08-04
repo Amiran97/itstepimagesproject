@@ -1,0 +1,68 @@
+﻿@page "/profile/{UserName}"
+
+@inject AccountService AccountService
+@inject HttpClient HttpClient
+
+<h1>Profile</h1>
+
+@if (UserProfile == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <h3>Name: @UserProfile.Name</h3>
+    <h3>Email: @UserProfile.Email</h3>
+    <h3>Photo:</h3>
+    <img height="300" src="@UserProfile.Avatar" />
+
+    <hr />
+
+    <img height="300" src="@UploadedBase64Image" alt="Red dot" />
+
+    <hr />
+
+    @if (File != null)
+    {
+        <p>Name: @File.Name</p>
+        <p>Size in bytes: @File.Size</p>
+        <p>Last modified date: @File.LastModified.ToShortDateString()</p>
+        <p>Content type (not always supplied by the browser): @File.Type</p>
+    }
+    <InputFile OnChange="HandleFileSelected" />
+    <button @onclick="UpdatePhoto" class="btn btn-primary">Update photo</button>
+}
+
+@code {
+
+    [Parameter]
+    public string UserName { get; set; }
+    public ProfileDto UserProfile { get; set; }
+    public IFileListEntry File { get; set; }
+    public string UploadedBase64Image { get; set; } = "data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
+    public System.IO.MemoryStream MemoryStream { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        UserProfile = await AccountService.GetProfile(UserName);
+    }
+
+    async Task HandleFileSelected(IFileListEntry[] files)
+    {
+        File = files.FirstOrDefault();
+        MemoryStream = await File.ReadAllAsync();
+        var base64 = Convert.ToBase64String(MemoryStream.ToArray());
+        UploadedBase64Image = $"data:{File.Type};base64, {base64}";
+    }
+
+    async Task UpdatePhoto()
+    {
+        if (File != null)
+        {
+            var content = new MultipartFormDataContent();
+            var byteArray = new ByteArrayContent(MemoryStream.ToArray());
+            content.Add(byteArray, "\"file\"", File.Name);
+            await HttpClient.PostAsync("/api/Profile/upload", content);
+        }
+    }
+}

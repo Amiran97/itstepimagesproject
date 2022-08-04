@@ -1,0 +1,56 @@
+﻿@page "/register"
+@inject AccountService accountService
+@inject NavigationManager navigationManager
+
+<h1>Sign up</h1>
+
+<div class="row">
+    <div class="col-6">
+        <EditForm OnValidSubmit="OnSubmit" Model="credentials">
+            <FluentValidation.FluentValidator></FluentValidation.FluentValidator>
+            <ValidationSummary></ValidationSummary>
+            <div class="form-group">
+                <InputText @bind-Value="credentials.Email" placeholder="Email" id="email" type="email" class="form-control" />
+                <ValidationMessage For="@(() => credentials.Email)" />
+            </div>
+            <div class="form-group">
+                <InputText @bind-Value="credentials.Name" placeholder="Name" id="name" type="text" class="form-control" />
+                <ValidationMessage For="@(() => credentials.Email)" />
+            </div>
+            <div class="form-group">
+                <InputText @bind-Value="credentials.Password" placeholder="Password" id="password" type="password" class="form-control" />
+                <ValidationMessage For="@(() => credentials.Password)" />
+            </div>
+            <div class="form-group">
+                <InputText @bind-Value="credentials.PasswordConfirmation" placeholder="Password confirm" id="password" type="password" class="form-control" />
+                <ValidationMessage For="@(() => credentials.PasswordConfirmation)" />
+            </div>
+            <button type="submit" class="btn btn-primary">Sign up</button>
+        </EditForm>
+    </div>
+</div>
+
+
+@code {
+    public RegistrationCredentialsDto credentials { get; set; } = new RegistrationCredentialsDto();
+
+    async Task OnSubmit()
+    {
+        try
+        {
+            if(credentials.Password.Equals(credentials.PasswordConfirmation))
+            {
+                await accountService.Register(credentials);
+                navigationManager.NavigateTo("");
+            }
+            else
+            {
+                throw new Exception("passwords not same!");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+}

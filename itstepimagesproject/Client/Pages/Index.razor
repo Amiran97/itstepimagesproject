@@ -1,0 +1,45 @@
+﻿@page "/"
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<h1>Posts</h1>
+
+<div class="container-fluid">
+    @foreach (var item in listPost)
+    {
+        <div class="card mb-4" style="width: 300px;">
+            <div class="card-header">
+                <h2>@item.Author.Name</h2>
+                @*<img src="@item.Author.Avatar" height="30" class="card-img"/>*@
+            </div>
+            <div class="card-body">
+                <h2>@item.Content</h2>
+                @if (item.Poster != null)
+                {
+                    <img src="@item.Poster" height="300" class="card-img" />
+                }
+            </div>
+            
+            <div class="card-footer">
+                <p>Likes: @item.LikesCounter Comments: @item.СommentsCounter</p>
+                <p class="text-muted"><small>@item.CreatedAt</small></p>
+                <button @onclick="() => onPostClick(item.Id)" class="btn btn-primary">Detail</button>
+            </div>
+        </div>
+    
+    }
+</div>
+
+@code{
+    public List<PostDto> listPost { get; set; } = new List<PostDto>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        listPost = await httpClient.GetFromJsonAsync<List<PostDto>>("/api/Post");
+    }
+
+    public void onPostClick(string postId)
+    {
+        navigationManager.NavigateTo($"/post/{postId}");
+    }
+}

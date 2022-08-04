@@ -1,0 +1,40 @@
+﻿@page "/login"
+@inject AccountService accountService;
+@inject NavigationManager navigationManager; 
+
+<h1>Sign in</h1>
+
+<div class="row">
+    <div class="col-6">
+        <EditForm OnValidSubmit="OnSubmit" Model="credentials">
+            <FluentValidation.FluentValidator></FluentValidation.FluentValidator>
+            <ValidationSummary></ValidationSummary>
+            <div class="form-group">
+                <InputText @bind-Value="credentials.Email" placeholder="Email" id="email" type="email" class="form-control"/>
+                <ValidationMessage For="@(() => credentials.Email)"/>
+            </div>
+            <div class="form-group">
+                <InputText @bind-Value="credentials.Password" placeholder="Password" id="password" type="password" class="form-control" />
+                <ValidationMessage For="@(() => credentials.Password)" />
+            </div>
+            <button type="submit" class="btn btn-primary">Sign in</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    public LoginCredentialsDto credentials { get; set; } = new LoginCredentialsDto();
+
+    async Task OnSubmit()
+    {
+        try
+        {
+            await accountService.Login(credentials);
+            navigationManager.NavigateTo("");
+        } 
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+}
